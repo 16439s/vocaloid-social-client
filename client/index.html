@@ -108,7 +108,7 @@ body {
         <div class="menu-links">
             <a class="menu" href="/">Local Timeline</a>
             <a class="menu" href="https://client.164.one/api/logout" id="logoutLink" style="display: none;">ログアウト</a>
-            <a class="menu" href="https://client.164.one/api/login" id="loginlink">ログイン</a>
+            <a class="menu" href="https://client.164.one/api/login" id="loginLink">ログイン</a>
         </div>
     </div>
     
@@ -118,19 +118,25 @@ body {
 
 <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
 <script>
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', async function() {
     fetchTimelineData();
-    checkToken(); // tokenをチェックして表示を切り替える
+    await checkToken(); // tokenをチェックして表示を切り替える
 });
 
-function checkToken() {
-    var token = getCookie('token');
-    if (token) {
-        document.getElementById('logoutLink').style.display = 'inline-block';
-        document.getElementById('loginLink').style.display = 'none'; // ログインボタンを非表示にする
-    } else {
-        document.getElementById('logoutLink').style.display = 'none';
-        document.getElementById('loginLink').style.display = 'inline-block'; // ログインボタンを表示する
+async function checkToken() {
+    try {
+        const response = await fetch('/api/checktoken'); // `/api/checktoken`エンドポイントにリクエストを送信
+        const data = await response.json();
+
+        if (data.loggedIn) {
+            document.getElementById('logoutLink').style.display = 'inline-block';
+            document.getElementById('loginLink').style.display = 'none'; // ログインボタンを非表示にする
+        } else {
+            document.getElementById('logoutLink').style.display = 'none';
+            document.getElementById('loginLink').style.display = 'inline-block'; // ログインボタンを表示する
+        }
+    } catch (error) {
+        console.error('Error checking token:', error);
     }
 }
 
