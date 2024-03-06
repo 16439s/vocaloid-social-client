@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Local Timeline</title>
+<style>
+body {
+    font-family: Arial, sans-serif;
+    background-color: #f0f2f5;
+    margin: 0;
+    padding: 20px;
+    font-size: medium;
+}
+
+.card {
+    background-color: #fff;
+    border-radius: 10px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+.card p {
+    margin: 10px 0;
+}
+
+.card img {
+    max-width: 7em;
+    border-radius: 5px;
+    margin-top: 10px;
+}
+
+.renote-note-message {
+    color: #777;
+    font-style: italic;
+    margin-top: 5px;
+}
+</style>
+</head>
+<body>
+  <header>
+    <!-- Header content goes here -->
+  </header>
+
+  <div id="timeline" class="timeline">
+  </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    fetchTimelineData();
+});
+
+function fetchTimelineData() {
+    fetch('https://vocaloid.social/api/notes/local-timeline', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            withFiles: true,
+            withRenotes: true,
+            withReplies: false,
+            limit: 30
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        const timeline = document.getElementById('timeline');
+        data.forEach(note => {
+            const card = createCard(note);
+            timeline.appendChild(card);
+        });
+    })
+    .catch(error => {
+        console.error('Error fetching timeline data:', error);
+    });
+}
+
+function createCard(note) {
+    const card = document.createElement('div');
+    card.className = 'card';
+
+    const user = document.createElement('p');
+    user.innerHTML = `<strong>${note.user.name}</strong> @${note.user.username}`;
+    card.appendChild(user);
+
+    const text = document.createElement('p');
+    text.innerHTML = replaceEmojis(note.text || note.cw);
+    card.appendChild(text);
+
+    (note.files || []).forEach(attachment => {
+        if (isImageType(attachment.type)) {
+            const image = document.createElement('img');
+            image.src = 'image_proxy.php?url=' + encodeURIComponent(attachment.url);
+            image.alt = 'Attached Image';
+            card.appendChild(image);
+        }
+    });
+
+    const createdAt = document.createElement('p');
+    createdAt.textContent = new Date(note.createdAt).toLocaleString();
+    card.appendChild(createdAt);
+
+    const postID = document.createElement('p');
+    postID.style.textAlign = 'right';
+    postID.textContent = `投稿ID: ${note.id}`;
+    card.appendChild(postID);
+
+    if (note.renoteId !== null) {
+        const renoteMessage = document.createElement('p');
+        renoteMessage.className = 'renote-note-message';
+        renoteMessage.textContent = '※このノートはリノートです。';
+        card.appendChild(renoteMessage);
+    }
+
+    return card;
+}
+
+function replaceEmojis(text) {
+    return text.replace(/:(.*?):/g, (match, emojiName) => {
+        const imageUrl = getEmojiImageUrl(emojiName);
+        return imageUrl ? `<img src="${imageUrl}" alt="${emojiName}" class="emoji">` : match;
+    });
+}
+
+function getEmojiImageUrl(emojiName) {
+    const apiUrl = `https://vocaloid.social/api/emoji?name=${encodeURIComponent(emojiName)}`;
+    return fetch(apiUrl)
+        .then(response => response.json())
+        .then(data => data.url)
+        .catch(error => {
+            console.error('Error fetching emoji image URL:', error);
+            return null;
+        });
+}
+
+function isImageType(type) {
+    return type.startsWith('image/');
+}
+</script>
+</body>
+</html>
