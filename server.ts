@@ -84,6 +84,27 @@ app.get('/api/logout', (req, res) => {
     `);
 });
 
+app.get('/api/proxy', async (req: Request, res: Response) => {
+    const imageUrl: string | string[] | undefined = req.query.url as string;
+  
+    if (!imageUrl) {
+      return res.status(400).json({ error: 'Image URL is required' });
+    }
+  
+    try {
+      // 画像のコンテンツタイプを取得
+      const response = await axios.head(imageUrl);
+      const contentType = response.headers['content-type'];
+  
+      // 画像データを直接送信
+      res.setHeader('Content-Type', contentType);
+      const imageStream = await axios.get(imageUrl, { responseType: 'stream' });
+      imageStream.data.pipe(res);
+    } catch (error) {
+      return res.status(500).json({ error: 'Failed to fetch or proxy image' });
+    }
+  });
+
 // 静的ファイルの提供
 app.use(express.static(path.join(__dirname)));
 
