@@ -3,8 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Local Timeline</title>
+<title>Timeline</title>
 <style>
+/* 共通のスタイル */
 body {
     font-family: Arial, sans-serif;
     background-color: #f0f2f5;
@@ -36,20 +37,99 @@ body {
     font-style: italic;
     margin-top: 5px;
 }
+
+/* Headerのスタイル */
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 20px;
+    background-color: #007bff;
+    color: #fff;
+    position: relative; 
+}
+
+.menu {
+    text-decoration: none;
+    color: #fff;
+}
+
+.menu-toggle {
+    cursor: pointer;
+    display: none; 
+    position: absolute; 
+    right: 20px; 
+    top: 50%; 
+    transform: translateY(-50%); 
+}
+
+.menu-links {
+    display: flex;
+    flex-direction: column;
+    background-color: #007bff;
+    padding: 10px;
+    border-radius: 5px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+}
+
+@media screen and (max-width: 600px) {
+    .header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .menu-toggle {
+        display: block; 
+    }
+
+    .menu-links {
+        display: none; 
+        position: absolute;
+        top: 60px; 
+        right: 20px;
+    }
+
+    .menu-links.show-menu {
+        display: flex; 
+    }
+}
 </style>
 </head>
 <body>
-  <header>
-    <!-- Header content goes here -->
-  </header>
+    <!-- Header -->
+    <div class="header">
+        <div>Vocaloid.social Timeline</div>
+        <div class="menu-toggle" onclick="toggleMenu()">
+            <!-- ハンバーガーメニューアイコン（SVG） -->
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path fill-rule="evenodd" clip-rule="evenodd" d="M3 6H21V8H3V6ZM3 11H21V13H3V11ZM3 18H21V20H3V18Z" fill="white"/>
+            </svg>
+        </div>
+        <div class="menu-links">
+            <a class="menu" href="/">Local Timeline</a>
+            <a class="menu" href="https://client.164.one/api/logout" id="logoutLink" style="display: none;">ログアウト</a>
+            <a class="menu" href="https://client.164.one/api/login">ログイン</a>
+        </div>
+    </div>
+    
+    <!-- Timeline -->
+    <div id="timeline" class="timeline">
+    </div>
 
-  <div id="timeline" class="timeline">
-  </div>
-
+<script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     fetchTimelineData();
+    checkToken(); // tokenをチェックして表示を切り替える
 });
+
+function checkToken() {
+    var token = getCookie('token');
+    if (token) {
+        document.getElementById('createPostLink').style.display = 'inline-block';
+        document.getElementById('logoutLink').style.display = 'inline-block';
+    }
+}
 
 function fetchTimelineData() {
     fetch('https://vocaloid.social/api/notes/local-timeline', {
@@ -137,6 +217,23 @@ function getEmojiImageUrl(emojiName) {
 
 function isImageType(type) {
     return type.startsWith('image/');
+}
+
+// Cookieから指定した名前のCookieの値を取得する関数
+function getCookie(name) {
+    var cookies = document.cookie.split(';');
+    for (var i = 0; i < cookies.length; i++) {
+        var cookie = cookies[i].trim();
+        if (cookie.startsWith(name + '=')) {
+            return cookie.substring(name.length + 1);
+        }
+    }
+    return '';
+}
+
+function toggleMenu() {
+    var menuLinks = document.querySelector('.menu-links');
+    menuLinks.classList.toggle('show-menu');
 }
 </script>
 </body>
