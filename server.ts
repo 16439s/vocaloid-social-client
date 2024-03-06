@@ -2,6 +2,7 @@ import express, { Request, Response } from 'express';
 import path from 'path';
 import { v4 as uuidv4 } from 'uuid';
 import axios from 'axios';
+import cookieParser from 'cookie-parser';
 
 const app = express();
 const PORT = 3000;
@@ -20,7 +21,7 @@ app.get('/api/login', (req: Request, res: Response) => {
     if (req.cookies.token) {
         res.send("既にログインされています。<br>3秒後にトップページに戻ります。");
         setTimeout(() => {
-            res.redirect('/index.php');
+            res.redirect('/');
         }, 3000);
     } else {
         const uuid = uuidv4();
@@ -62,6 +63,23 @@ app.get('/api/login/callback', async (req: Request, res: Response) => {
     } else {
         res.redirect('/api/login');
     }
+});
+
+// Cookieを解析するためのmiddlewareを設定
+app.use(cookieParser());
+
+// ログアウトのエンドポイント
+app.get('/api/logout', (req, res) => {
+    // tokenクッキーを削除
+    res.clearCookie('token');
+    
+    // ログアウトメッセージを表示
+    res.send(`
+        <div id='logout-message' class='centered-message' style='display:none;'>
+            ログアウトしました。<br>5秒後にトップページに戻ります。
+        </div>
+        <meta http-equiv="Refresh" content="5; url=https://client.164.one">
+    `);
 });
 
 // 静的ファイルの提供
