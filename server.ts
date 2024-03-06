@@ -12,6 +12,8 @@ const instance = "vocaloid.social";
 const callback = "client.164.one";
 const permissions = "read:account,write:notes";
 
+app.use(cookieParser());
+
 // index.htmlを表示する
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'client/index.html'));
@@ -21,7 +23,7 @@ app.get('/api/login', (req: Request, res: Response) => {
     if (req.cookies.token) {
         res.send("既にログインされています。<br>3秒後にトップページに戻ります。");
         setTimeout(() => {
-            res.redirect('/');
+            res.redirect('https://client.164.one');
         }, 3000);
     } else {
         const uuid = uuidv4();
@@ -34,7 +36,7 @@ app.get('/api/login/callback', async (req: Request, res: Response) => {
     if (req.query.session) {
         const session = req.query.session as string;
         const host = req.get('referer');
-        const url = `${host}/api/miauth/${session}/check`;
+        const url = `${host}api/miauth/${session}/check`;
 
         try {
             const { data } = await axios.post(url, {}, {

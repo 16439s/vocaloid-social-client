@@ -126,8 +126,11 @@ document.addEventListener('DOMContentLoaded', function() {
 function checkToken() {
     var token = getCookie('token');
     if (token) {
-        document.getElementById('createPostLink').style.display = 'inline-block';
         document.getElementById('logoutLink').style.display = 'inline-block';
+        document.getElementById('loginLink').style.display = 'none'; // ログインボタンを非表示にする
+    } else {
+        document.getElementById('logoutLink').style.display = 'none';
+        document.getElementById('loginLink').style.display = 'inline-block'; // ログインボタンを表示する
     }
 }
 
