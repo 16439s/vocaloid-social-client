@@ -14,7 +14,7 @@ const permissions = "read:account,write:notes";
 
 // index.htmlを表示する
 app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'index.html'));
+    res.sendFile(path.join(__dirname, 'client/index.html'));
 });
 
 app.get('/api/login', (req: Request, res: Response) => {
