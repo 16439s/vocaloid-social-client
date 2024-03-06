@@ -175,7 +175,7 @@ function createCard(note) {
     (note.files || []).forEach(attachment => {
         if (isImageType(attachment.type)) {
             const image = document.createElement('img');
-            image.src = 'image_proxy.php?url=' + encodeURIComponent(attachment.url);
+            image.src = '/api/proxy?url=' + encodeURIComponent(attachment.url);
             image.alt = 'Attached Image';
             card.appendChild(image);
         }
