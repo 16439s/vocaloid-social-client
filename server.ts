@@ -27,7 +27,7 @@ app.get('/api/login', (req: Request, res: Response) => {
         }, 3000);
     } else {
         const uuid = uuidv4();
-        const url = `https://${instance}/miauth/${uuid}?name=${appname}&callback=https://${callback}/callback.php&permission=${permissions}`;
+        const url = `https://${instance}/miauth/${uuid}?name=${appname}&callback=https://${callback}/api/login/callback&permission=${permissions}`;
         res.redirect(url);
     }
 });
