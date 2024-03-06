@@ -1,10 +1,14 @@
-import express, { Request, Response } from 'express';
+import Koa from 'koa';
+import Router from 'koa-router';
 import path from 'path';
 import { v4 as uuidv4 } from 'uuid';
 import axios from 'axios';
-import cookieParser from 'cookie-parser';
+import koaBody from 'koa-body';
+import koaCookie from 'koa-cookie';
+import fs from 'fs/promises';
 
-const app = express();
+const app = new Koa();
+const router = new Router();
 const PORT = 3000;
 
 const appname = "Vocaloid.social Timeline";
@@ -12,30 +16,31 @@ const instance = "vocaloid.social";
 const callback = "client.164.one";
 const permissions = "read:account,write:notes";
 
-app.use(cookieParser());
+app.use(koaCookie());
+app.use(koaBody());
 
 // index.htmlを表示する
-app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'client/index.html'));
+router.get('/', async (ctx) => {
+    ctx.body = await fs.readFile(path.join(__dirname, 'client/index.html'), 'utf-8');
 });
 
-app.get('/api/login', (req: Request, res: Response) => {
-    if (req.cookies.token) {
-        res.send("既にログインされています。<br>3秒後にトップページに戻ります。");
+router.get('/api/login', async (ctx) => {
+    if (ctx.cookies.get('token')) {
+        ctx.body = "既にログインされています。<br>3秒後にトップページに戻ります。";
         setTimeout(() => {
-            res.redirect('https://client.164.one');
+            ctx.redirect('https://client.164.one');
         }, 3000);
     } else {
         const uuid = uuidv4();
-        const url = `https://${instance}/miauth/${uuid}?name=${appname}&callback=https://${callback}/api/login/callback&permission=${permissions}`;
-        res.redirect(url);
+        const url = `https://${instance}/miauth/${uuid}?name=${appname}&callback=http://${callback}/api/login/callback&permission=${permissions}`;
+        ctx.redirect(url);
     }
 });
 
-app.get('/api/login/callback', async (req: Request, res: Response) => {
-    if (req.query.session) {
-        const session = req.query.session as string;
-        const host = req.get('referer');
+router.get('/api/login/callback', async (ctx) => {
+    if (ctx.query.session) {
+        const session = ctx.query.session as string;
+        const host = ctx.headers.referer;
         const url = `${host}api/miauth/${session}/check`;
 
         try {
@@ -46,49 +51,48 @@ app.get('/api/login/callback', async (req: Request, res: Response) => {
             });
 
             if (data.ok && data.token) {
-                res.cookie('token', data.token, { maxAge: 60 * 60 * 24 * 7 * 1000 });
+                ctx.cookies.set('token', data.token, { maxAge: 60 * 60 * 24 * 7 * 1000 });
                 const userName = data.user.name;
-                res.send(`<div id='login-message' style='display:none;'>
+                ctx.body = `<div id='login-message' style='display:none;'>
                             ${userName} にログインしました。<br>5秒後にトップページに戻ります。
                         </div>
                         <script>
                             setTimeout(() => {
                                 location.href = '/';
                             }, 5000);
-                        </script>`);
+                        </script>`;
             } else {
-                res.redirect('/api/login');
+                ctx.redirect('/api/login');
             }
         } catch (error) {
-            res.redirect('/api/login');
+            ctx.redirect('/api/login');
         }
     } else {
-        res.redirect('/api/login');
+        ctx.redirect('/api/login');
     }
 });
 
-// Cookieを解析するためのmiddlewareを設定
-app.use(cookieParser());
-
 // ログアウトのエンドポイント
-app.get('/api/logout', (req, res) => {
+router.get('/api/logout', async (ctx) => {
     // tokenクッキーを削除
-    res.clearCookie('token');
+    ctx.cookies.set('token', null);
     
     // ログアウトメッセージを表示
-    res.send(`
+    ctx.body = `
         <div id='logout-message' class='centered-message' style='display:none;'>
             ログアウトしました。<br>5秒後にトップページに戻ります。
         </div>
         <meta http-equiv="Refresh" content="5; url=https://client.164.one">
-    `);
+    `;
 });
 
-app.get('/api/proxy', async (req: Request, res: Response) => {
-    const imageUrl: string | string[] | undefined = req.query.url as string;
+router.get('/api/proxy', async (ctx) => {
+    const imageUrl: string | string[] | undefined = ctx.query.url as string;
   
     if (!imageUrl) {
-      return res.status(400).json({ error: 'Image URL is required' });
+      ctx.status = 400;
+      ctx.body = { error: 'Image URL is required' };
+      return;
     }
   
     try {
@@ -97,16 +101,28 @@ app.get('/api/proxy', async (req: Request, res: Response) => {
       const contentType = response.headers['content-type'];
   
       // 画像データを直接送信
-      res.setHeader('Content-Type', contentType);
+      ctx.set('Content-Type', contentType);
       const imageStream = await axios.get(imageUrl, { responseType: 'stream' });
-      imageStream.data.pipe(res);
+      ctx.body = imageStream.data;
     } catch (error) {
-      return res.status(500).json({ error: 'Failed to fetch or proxy image' });
+      ctx.status = 500;
+      ctx.body = { error: 'Failed to fetch or proxy image' };
     }
   });
 
-// 静的ファイルの提供
-app.use(express.static(path.join(__dirname)));
+  router.get('/api/checktoken', async (ctx) => {
+    const token = ctx.cookies.get('token');
+
+    // トークンが存在するかどうかを確認し、ログイン状態を返す
+    if (token) {
+        ctx.body = { loggedIn: true };
+    } else {
+        ctx.body = { loggedIn: false };
+    }
+});
+
+// ルーターをKoaアプリケーションに適用
+app.use(router.routes()).use(router.allowedMethods());
 
 // サーバーを起動する
 app.listen(PORT, () => {
