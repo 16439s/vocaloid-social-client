@@ -118,13 +118,33 @@ router.get('/api/proxy', async (ctx) => {
   router.get('/api/checktoken', async (ctx) => {
     const token = ctx.cookies.get('token');
 
-    // トークンが存在するかどうかを確認し、ログイン状態を返す
     if (token) {
-        ctx.body = { loggedIn: true };
+        try {
+            const response = await axios.post(`https://${instance}/api/i`, { i: token }, {
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            if (response.status === 200) {
+                // Token is valid, user is authenticated
+                ctx.body = { loggedIn: true };
+            } else {
+                // Token is invalid, remove token cookie and redirect to home
+                ctx.cookies.set('token', '', { maxAge: 0 });
+                ctx.redirect('/');
+            }
+        } catch (error) {
+            // Error occurred while validating token
+            ctx.status = 500;
+            ctx.body = { error: 'Failed to validate token' };
+        }
     } else {
+        // No token cookie found, user is not authenticated
         ctx.body = { loggedIn: false };
     }
 });
+
 
 // ルーターをKoaアプリケーションに適用
 app.use(router.routes()).use(router.allowedMethods());
