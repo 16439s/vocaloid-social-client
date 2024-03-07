@@ -6,6 +6,7 @@ import axios from 'axios';
 import koaBody from 'koa-body';
 import koaCookie from 'koa-cookie';
 import fs from 'fs/promises';
+import sharp from 'sharp';
 
 const app = new Koa();
 const router = new Router();
@@ -88,27 +89,31 @@ router.get('/api/logout', async (ctx) => {
 
 router.get('/api/proxy', async (ctx) => {
     const imageUrl: string | string[] | undefined = ctx.query.url as string;
-  
+
     if (!imageUrl) {
-      ctx.status = 400;
-      ctx.body = { error: 'Image URL is required' };
-      return;
+        ctx.status = 400;
+        ctx.body = { error: 'Image URL is required' };
+        return;
     }
-  
+
     try {
-      // 画像のコンテンツタイプを取得
-      const response = await axios.head(imageUrl);
-      const contentType = response.headers['content-type'];
-  
-      // 画像データを直接送信
-      ctx.set('Content-Type', contentType);
-      const imageStream = await axios.get(imageUrl, { responseType: 'stream' });
-      ctx.body = imageStream.data;
+        // 画像を取得
+        const imageResponse = await axios.get(imageUrl, { responseType: 'arraybuffer' });
+
+        // 画像をリサイズおよび圧縮
+        const resizedCompressedImageBuffer = await sharp(imageResponse.data)
+            .resize({ width: 150 }) // 最大幅150ピクセルにリサイズ
+            .webp({ quality: 70 }) // WebP形式で品質70%で圧縮
+            .toBuffer();
+
+        // コンテンツタイプを設定して圧縮された画像を返す
+        ctx.set('Content-Type', 'image/webp');
+        ctx.body = resizedCompressedImageBuffer;
     } catch (error) {
-      ctx.status = 500;
-      ctx.body = { error: 'Failed to fetch or proxy image' };
+        ctx.status = 500;
+        ctx.body = { error: 'Failed to fetch or compress image' };
     }
-  });
+});
 
   router.get('/api/checktoken', async (ctx) => {
     const token = ctx.cookies.get('token');
